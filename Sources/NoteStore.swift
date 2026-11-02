@@ -159,6 +159,47 @@ final class NoteStore: ObservableObject {
         persist(notes[i])
     }
 
+    func setStatus(id: String, statusID: String?) {
+        guard writable, let i = notes.firstIndex(where: { $0.id == id }),
+              notes[i].statusID != statusID else { return }
+        notes[i].statusID = statusID
+        notes[i].modified = Date()
+        persist(notes[i])
+    }
+
+    /// Removing a status definition also clears it from every affected note,
+    /// preventing a deleted workflow label from reappearing after a relaunch.
+    func clearStatus(id statusID: String) {
+        guard writable else { return }
+        for i in notes.indices where notes[i].statusID == statusID {
+            notes[i].statusID = nil
+            notes[i].modified = Date()
+            _ = persist(notes[i])
+        }
+    }
+
+    func clearLineStatus(id statusID: String) {
+        guard writable else { return }
+        for i in notes.indices {
+            let updated = LineStatus.removing(statusID, from: notes[i].body)
+            guard updated != notes[i].body else { continue }
+            notes[i].body = updated
+            notes[i].modified = Date()
+            _ = persist(notes[i])
+        }
+    }
+
+    func updateLineStatusLabel(_ status: NoteStatus) {
+        guard writable else { return }
+        for i in notes.indices {
+            let updated = LineStatus.updatingLabel(for: status, in: notes[i].body)
+            guard updated != notes[i].body else { continue }
+            notes[i].body = updated
+            notes[i].modified = Date()
+            _ = persist(notes[i])
+        }
+    }
+
     func setArchived(id: String, _ archived: Bool) {
         guard writable, let i = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[i].archived = archived

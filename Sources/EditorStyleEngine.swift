@@ -140,6 +140,7 @@ enum EditorStyleEngine {
             }
             styleCompletedTasks(storage, fragment, offset: range.location,
                                 ink: ink, isCompletedTask: isCompletedTask)
+            styleLineStatuses(storage, fragment, offset: range.location)
             storage.endEditing()
 
             // Hidden markers require glyph regeneration, but only for the lines
@@ -328,6 +329,26 @@ enum EditorStyleEngine {
                                  value: NSUnderlineStyle.single.rawValue, range: global)
             storage.addAttribute(.foregroundColor,
                                  value: ink.withAlphaComponent(0.45), range: global)
+        }
+    }
+
+    private static func styleLineStatuses(_ storage: NSTextStorage, _ fragment: String,
+                                          offset: Int) {
+        let local = fragment as NSString
+        let full = NSRange(location: 0, length: local.length)
+        local.enumerateSubstrings(in: full, options: .byLines) { line, lineRange, _, _ in
+            guard let line, let match = LineStatus.match(in: line) else { return }
+            let marker = NSRange(location: offset + lineRange.location + match.markerRange.location,
+                                 length: match.markerRange.length)
+            storage.addAttribute(.notyHidden, value: true, range: marker)
+            storage.addAttribute(.foregroundColor, value: NSColor.clear, range: marker)
+            guard let display = match.displayRange else { return }
+            let range = NSRange(location: offset + lineRange.location + display.location,
+                                length: display.length)
+            // The visible capsule is an overlay view (LineStatusOverlayManager);
+            // the raw text only reserves its width here so the caret and
+            // selection keep walking through the same characters.
+            storage.addAttribute(.foregroundColor, value: NSColor.clear, range: range)
         }
     }
 

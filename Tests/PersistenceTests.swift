@@ -67,9 +67,13 @@ enum PersistenceTests {
         check(try storage.load().first?.body == "Keep this unsaved edit", "retry must persist the retained edit")
         model.updateTitle(id: note.id, title: "Keep this unsaved edit")
         check(model.flushAll(), "custom title must save")
+        model.setStatus(id: note.id, statusID: "noty-status-testing")
+        check(model.flushAll(), "a status change must save")
         let reopened = NoteStore(store: storage, seedWelcome: false, onError: { _ in errors += 1 })
         check(reopened.note(id: note.id)?.title == "Keep this unsaved edit",
               "custom titles equal to the body must survive reopening")
+        check(reopened.note(id: note.id)?.statusID == "noty-status-testing",
+              "a note status must survive reopening")
     }
 
     private static func testCryptoFailures(_ dir: URL, _ check: (Bool, String) -> Void) throws {
@@ -136,13 +140,15 @@ enum PersistenceTests {
 
     private static func testArchives(_ dir: URL, _ check: (Bool, String) -> Void) throws {
         let original = Note(body: "Original title\nBody", color: 3, archived: true, pinned: true,
+                            statusID: "noty-status-testing",
                             textDirection: .rightToLeft, order: 12)
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         let data = try encoder.encode(StickyArchive(notes: [StickyNote(original)]))
         var restored = try Transfer.decodeArchive(data)[0]
         restored.body = "Changed title\nBody"
-        check(restored.pinned && restored.archived && restored.textDirection == .rightToLeft,
+        check(restored.pinned && restored.archived && restored.statusID == "noty-status-testing"
+                  && restored.textDirection == .rightToLeft,
               "archives must preserve pin, archive and writing direction")
         check(restored.title.isEmpty && restored.displayTitle == "Changed title",
               "automatic archive titles must continue following the body")

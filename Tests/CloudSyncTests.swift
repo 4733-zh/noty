@@ -52,6 +52,7 @@ enum CloudSyncTests {
         note.modified = t1
         note.archived = true
         note.pinned = true
+        note.statusID = "noty-status-testing"
         note.order = -2.5
         note.textDirection = .rightToLeft
 
@@ -63,6 +64,7 @@ enum CloudSyncTests {
         modified: \(NoteDocument.stamp.string(from: t1))
         archived: true
         pinned: true
+        status: noty-status-testing
         order: -2.5
         direction: rightToLeft
         title: Shopping

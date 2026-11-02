@@ -60,6 +60,38 @@ enum Settings {
         }
     }
 
+    // MARK: Note statuses
+
+    private static let noteStatusesKey = "noteStatuses"
+
+    /// Defaults are deliberately modest; people can rename, recolour, add, or
+    /// remove them in Settings without changing any note's content.
+    static var defaultNoteStatuses: [NoteStatus] {
+        [
+            NoteStatus(id: "noty-status-in-progress", name: L10n.text("status.default.in_progress"), colorHex: "2563EB"),
+            NoteStatus(id: "noty-status-developed", name: L10n.text("status.default.developed"), colorHex: "15803D"),
+            NoteStatus(id: "noty-status-testing", name: L10n.text("status.default.testing"), colorHex: "B45309"),
+            NoteStatus(id: "noty-status-blocked", name: L10n.text("status.default.blocked"), colorHex: "B91C1C"),
+        ]
+    }
+
+    static var noteStatuses: [NoteStatus] {
+        get {
+            guard let data = d.data(forKey: noteStatusesKey),
+                  let statuses = try? JSONDecoder().decode([NoteStatus].self, from: data) else {
+                return defaultNoteStatuses
+            }
+            return statuses
+        }
+        set { d.set(try? JSONEncoder().encode(newValue), forKey: noteStatusesKey) }
+    }
+
+    /// Included in editor style tokens so a renamed or recoloured status
+    /// redraws every visible line immediately.
+    static var noteStatusStyleToken: String {
+        noteStatuses.map { "\($0.id):\($0.name):\($0.colorHex)" }.joined(separator: "|")
+    }
+
     static var showOverFullScreen: Bool {
         get { d.object(forKey: "showOverFullScreen") as? Bool ?? false }
         set { d.set(newValue, forKey: "showOverFullScreen") }

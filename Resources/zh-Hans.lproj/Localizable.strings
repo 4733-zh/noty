@@ -197,6 +197,24 @@
 "settings.updates.version" = "Noty %1$@  （内部版本 %2$@）";
 "settings.window_title" = "Noty 设置";
 
+"settings.statuses.add" = "添加状态";
+"settings.statuses.caption" = "工作流状态";
+"settings.statuses.empty" = "还没有状态。添加一个即可开始为便笺标记。";
+"settings.statuses.help" = "状态会显示在便笺标题旁。删除状态时，也会清除使用该状态的便笺标记。";
+"settings.statuses.name" = "状态名称";
+"settings.statuses.remove" = "删除状态";
+"settings.statuses.tab" = "状态";
+
+"status.accessibility" = "状态：%@";
+"status.add_short" = "＋状态";
+"status.choose" = "设置状态";
+"status.default.blocked" = "已阻塞";
+"status.default.developed" = "已开发";
+"status.default.in_progress" = "开发中";
+"status.default.testing" = "待测试";
+"status.new" = "新状态";
+"status.none" = "无状态";
+
 "shortcut.all_notes" = "所有便笺";
 "shortcut.archive_note" = "归档便笺";
 "shortcut.archive_window" = "归档窗口";

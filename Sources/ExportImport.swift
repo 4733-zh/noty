@@ -4,7 +4,7 @@ import UniformTypeIdentifiers
 // MARK: - Archive format
 
 struct StickyArchive: Codable {
-    var version = 3
+    var version = 4
     var app = "Noty"
     var exported = Date()
     var notes: [StickyNote]
@@ -26,6 +26,7 @@ struct StickyNote: Codable {
     var order: Double
     var textDirection: NoteTextDirection?
     var pinned: Bool?
+    var statusID: String?
 
     init(_ n: Note) {
         id = n.id; title = n.title; body = n.body
@@ -34,12 +35,13 @@ struct StickyNote: Codable {
         archived = n.archived; order = n.order
         textDirection = n.textDirection
         pinned = n.pinned
+        statusID = n.statusID
     }
 
     var note: Note {
         Note(id: id, title: title,
              body: body, color: color, created: created, modified: modified,
-             archived: archived, pinned: pinned ?? false, textDirection: textDirection ?? .automatic,
+             archived: archived, pinned: pinned ?? false, statusID: statusID, textDirection: textDirection ?? .automatic,
              order: order)
     }
 }
@@ -175,7 +177,7 @@ enum Transfer {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let archive = try decoder.decode(StickyArchive.self, from: data)
-        guard (1...3).contains(archive.version) else {
+        guard (1...4).contains(archive.version) else {
             throw PersistenceError.database(L10n.text("import.invalid_archive"))
         }
         guard archive.notes.allSatisfy({ NoteColor.all.indices.contains($0.color) }) else {

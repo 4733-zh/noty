@@ -197,6 +197,24 @@
 "settings.updates.version" = "Noty %1$@  (build %2$@)";
 "settings.window_title" = "Noty Settings";
 
+"settings.statuses.add" = "Add status";
+"settings.statuses.caption" = "Workflow statuses";
+"settings.statuses.empty" = "No statuses yet. Add one to start labelling notes.";
+"settings.statuses.help" = "Statuses appear beside a note title. Removing one also clears it from any notes using it.";
+"settings.statuses.name" = "Status name";
+"settings.statuses.remove" = "Remove status";
+"settings.statuses.tab" = "Statuses";
+
+"status.accessibility" = "Status: %@";
+"status.add_short" = "+ Status";
+"status.choose" = "Set status";
+"status.default.blocked" = "Blocked";
+"status.default.developed" = "Developed";
+"status.default.in_progress" = "In progress";
+"status.default.testing" = "Ready for test";
+"status.new" = "New status";
+"status.none" = "No status";
+
 "shortcut.all_notes" = "All Notes";
 "shortcut.archive_note" = "Archive note";
 "shortcut.archive_window" = "Archive window";

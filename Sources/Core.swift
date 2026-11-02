@@ -358,6 +358,8 @@ struct Note: Identifiable, Hashable {
     var modified: Date = Date()
     var archived: Bool = false
     var pinned: Bool = false
+    /// A workflow-status definition id from Settings, or nil when unlabelled.
+    var statusID: String? = nil
     var textDirection: NoteTextDirection = .automatic
     var order: Double = 0
 
@@ -373,6 +375,7 @@ struct Note: Identifiable, Hashable {
     static func derivedTitle(from body: String) -> String {
         for raw in body.split(whereSeparator: \.isNewline) {
             var clean = strippingImageTokens(String(raw))
+            clean = LineStatus.stripping(from: clean)
                 .trimmingCharacters(in: .whitespaces)
                 .replacingOccurrences(of: "^#{1,6}\\s*", with: "", options: .regularExpression)
             clean = Tasks.stripped(clean)
@@ -433,7 +436,7 @@ struct Note: Identifiable, Hashable {
     /// stripped first, so the skipped/taken lines line up with `derivedTitle`.
     var preview: String {
         let lines = body.split(whereSeparator: \.isNewline).map(String.init)
-            .map(Self.strippingImageTokens)
+            .map { LineStatus.stripping(from: Self.strippingImageTokens($0)) }
             .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         let rest = (hasCustomTitle ? lines : Array(lines.dropFirst()))
             .joined(separator: " ")
@@ -464,7 +467,8 @@ enum Tasks {
     static func stripped(_ line: some StringProtocol) -> String {
         guard isTask(line) else { return String(line) }
         let trimmed = line.drop(while: { $0 == " " || $0 == "\t" })
-        return String(trimmed.dropFirst()).trimmingCharacters(in: .whitespaces)
+        return LineStatus.stripping(from: String(trimmed.dropFirst()))
+            .trimmingCharacters(in: .whitespaces)
     }
 
     /// Markdown task syntax in, ☐/☑ out.

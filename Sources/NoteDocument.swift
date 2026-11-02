@@ -19,12 +19,13 @@ enum NoteDocument {
         static let modified = "modified"
         static let archived = "archived"
         static let pinned = "pinned"
+        static let status = "status"
         static let order = "order"
         static let direction = "direction"
         static let title = "title"
 
         static let all: Set<String> = [id, color, created, modified,
-                                       archived, pinned, order, direction, title]
+                                       archived, pinned, status, order, direction, title]
     }
 
     static let stamp: ISO8601DateFormatter = {
@@ -41,9 +42,14 @@ enum NoteDocument {
             "\(Key.modified): \(stamp.string(from: note.modified))",
             "\(Key.archived): \(note.archived)",
             "\(Key.pinned): \(note.pinned)",
+        ]
+        if let statusID = note.statusID, !statusID.isEmpty {
+            header.append("\(Key.status): \(statusID)")
+        }
+        header.append(contentsOf: [
             "\(Key.order): \(note.order)",
             "\(Key.direction): \(note.textDirection.rawValue)",
-        ]
+        ])
         // An empty title means "derive it from the first line" — a rule the model
         // owns. Writing the derived value out would freeze it, exactly the bug
         // NoteStore.migrateDerivedTitles exists to undo.
@@ -91,6 +97,7 @@ enum NoteDocument {
                 case Key.modified:  note.modified = stamp.date(from: value) ?? note.modified
                 case Key.archived:  note.archived = (value == "true")
                 case Key.pinned:    note.pinned = (value == "true")
+                case Key.status:    note.statusID = value.isEmpty ? nil : value
                 case Key.order:     note.order = Double(value) ?? note.order
                 case Key.direction: note.textDirection = NoteTextDirection(rawValue: value) ?? .automatic
                 case Key.title:     note.title = value

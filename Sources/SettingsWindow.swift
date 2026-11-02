@@ -129,6 +129,13 @@ final class SettingsModel: ObservableObject {
     @Published var noteSizeIndex: Int   { didSet { Settings.noteSizeIndex = noteSizeIndex; apply() } }
     @Published var openOnHover: Bool    { didSet { Settings.openOnHover = openOnHover; apply() } }
     @Published var tabPreview: Bool     { didSet { Settings.tabPreview = tabPreview; apply() } }
+    @Published var noteStatuses: [NoteStatus] {
+        didSet {
+            guard !loading else { return }
+            Settings.noteStatuses = noteStatuses
+            apply()
+        }
+    }
 
     @Published var cloudSync: Bool {
         didSet {
@@ -181,6 +188,7 @@ final class SettingsModel: ObservableObject {
         noteSizeIndex = Settings.noteSizeIndex
         openOnHover = Settings.openOnHover
         tabPreview = Settings.tabPreview
+        noteStatuses = Settings.noteStatuses
         cloudSync = Settings.cloudSyncEnabled
         scNewNote = Settings.scNewNote
         scAllNotes = Settings.scAllNotes
@@ -271,6 +279,27 @@ final class SettingsModel: ObservableObject {
         }
     }
 
+    func addStatus() {
+        noteStatuses.append(NoteStatus(name: L10n.text("status.new"), colorHex: "8B5CF6"))
+    }
+
+    func removeStatus(_ status: NoteStatus) {
+        noteStatuses.removeAll { $0.id == status.id }
+        NoteStore.shared.clearStatus(id: status.id)
+        NoteStore.shared.clearLineStatus(id: status.id)
+    }
+
+    func renameStatus(id: String, name: String) {
+        guard let index = noteStatuses.firstIndex(where: { $0.id == id }) else { return }
+        noteStatuses[index].name = name
+        NoteStore.shared.updateLineStatusLabel(noteStatuses[index])
+    }
+
+    func recolorStatus(id: String, color: Color) {
+        guard let index = noteStatuses.firstIndex(where: { $0.id == id }) else { return }
+        noteStatuses[index].colorHex = NoteStatus.hex(color)
+    }
+
     /// Warn about a combination already used by another Noty shortcut.
     func duplicate(of s: Shortcut, ignoring label: String) -> Bool {
         guard s.isSet else { return false }
@@ -337,6 +366,8 @@ struct SettingsView: View {
                 .tabItem { Label(L10n.text("settings.deck.tab"), systemImage: "menucard") }
             pane { notesTab }
                 .tabItem { Label(L10n.text("settings.notes.tab"), systemImage: "textformat") }
+            pane { statusesTab }
+                .tabItem { Label(L10n.text("settings.statuses.tab"), systemImage: "tag") }
             pane { syncTab }
                 .tabItem { Label(L10n.text("settings.sync.tab"), systemImage: "icloud") }
             pane { updatesTab }
@@ -527,6 +558,45 @@ struct SettingsView: View {
             toggleRow(L10n.text("settings.notes.markdown"),
                       help: L10n.text("settings.notes.markdown_help"),
                       isOn: $model.markdown)
+        }
+    }
+
+    @ViewBuilder
+    private var statusesTab: some View {
+        Section {
+            if model.noteStatuses.isEmpty {
+                Text(L10n.text("settings.statuses.empty"))
+                    .font(.system(size: 12)).foregroundStyle(.secondary)
+            } else {
+                ForEach(model.noteStatuses) { status in
+                    HStack(spacing: 8) {
+                        ColorPicker("", selection: Binding(
+                            get: { status.color },
+                            set: { model.recolorStatus(id: status.id, color: $0) }),
+                                    supportsOpacity: false)
+                            .labelsHidden()
+                            .frame(width: 28)
+                        TextField(L10n.text("settings.statuses.name"), text: Binding(
+                            get: { status.name },
+                            set: { model.renameStatus(id: status.id, name: $0) }))
+                            .textFieldStyle(.roundedBorder)
+                        NoteStatusBadge(status: status)
+                        Button { model.removeStatus(status) } label: {
+                            Image(systemName: "minus.circle")
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.secondary)
+                        .help(L10n.text("settings.statuses.remove"))
+                    }
+                }
+            }
+            Button { model.addStatus() } label: {
+                Label(L10n.text("settings.statuses.add"), systemImage: "plus")
+            }
+        } header: {
+            Text(L10n.text("settings.statuses.caption"))
+        } footer: {
+            Text(L10n.text("settings.statuses.help"))
         }
     }
 

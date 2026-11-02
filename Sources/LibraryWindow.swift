@@ -256,7 +256,7 @@ struct LibraryView: View {
 
 struct LibraryDetail: View {
     let note: Note
-    let bridge: EditorBridge
+    @ObservedObject var bridge: EditorBridge
 
     @ObservedObject private var store = NoteStore.shared
     private var text: String { store.note(id: note.id)?.body ?? "" }
@@ -340,7 +340,7 @@ struct LibraryDetail: View {
                          autofocus: false, fontSize: Settings.noteFontSize,
                          markdownEnabled: Settings.markdownStyling,
                          textDirection: note.textDirection,
-                         styleToken: "\(note.color)|\(Settings.noteFontSize)|\(Settings.noteFontName)|\(Settings.markdownStyling)")
+                         styleToken: "\(note.color)|\(Settings.noteFontSize)|\(Settings.noteFontName)|\(Settings.markdownStyling)|\(Settings.noteStatusStyleToken)")
                 .background(pal.paper)
         }
         .onDisappear { store.flush(id: note.id) }

@@ -221,7 +221,7 @@ private struct FloatingNoteView: View {
                              fontSize: Settings.noteFontSize,
                              markdownEnabled: Settings.markdownStyling,
                              textDirection: note.textDirection,
-                             styleToken: "\(note.color)|\(Settings.noteFontSize)|\(Settings.noteFontName)|\(Settings.markdownStyling)")
+                             styleToken: "\(note.color)|\(Settings.noteFontSize)|\(Settings.noteFontName)|\(Settings.markdownStyling)|\(Settings.noteStatusStyleToken)")
             }
             .background(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)

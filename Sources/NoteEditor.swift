@@ -85,6 +85,19 @@ final class EditorBridge: ObservableObject {
         tv.didChangeText()
     }
 
+    func setStatusForLine(at location: Int, statusID: String?) {
+        guard let tv = textView, let storage = tv.textStorage else { return }
+        let ns = tv.string as NSString
+        let line = ns.lineRange(for: NSRange(location: min(location, ns.length), length: 0))
+        let source = ns.substring(with: line)
+        let status = statusID.flatMap { id in Settings.noteStatuses.first { $0.id == id } }
+        let replacement = LineStatus.replacing(in: source, with: status)
+        guard replacement != source,
+              tv.shouldChangeText(in: line, replacementString: replacement) else { return }
+        storage.replaceCharacters(in: line, with: replacement)
+        tv.didChangeText()
+    }
+
     func focusText() {
         guard let tv = textView else { return }
         tv.window?.makeFirstResponder(tv)
@@ -137,6 +150,9 @@ final class TaskTextView: NSTextView {
     /// Installed by NoteTextView.makeNSView; kept on the view so the editor
     /// coordinator can refresh it after every style pass.
     var imageOverlays: NoteImageOverlayManager?
+    var lineStatusOverlays: LineStatusOverlayManager?
+    var onLineStatusChange: ((Int, String?) -> Void)?
+    private var statusMenuLineLocation: Int?
 
     override func deleteBackward(_ sender: Any?) {
         // A range selection means the user deliberately selected content —
@@ -505,11 +521,51 @@ final class TaskTextView: NSTextView {
 
     override func mouseDown(with event: NSEvent) {
         let point = convert(event.locationInWindow, from: nil)
+        if openStatusMenu(at: point) { return }
         if toggleBox(at: point) { return }
         // ⌘-click follows a link. A plain click has to keep placing the caret —
         // the note is a thing you edit first and read second.
         if event.modifierFlags.contains(.command), openLink(at: point) { return }
         super.mouseDown(with: event)
+    }
+
+    private func openStatusMenu(at point: NSPoint) -> Bool {
+        guard let storage = textStorage, storage.length > 0 else { return false }
+        let index = min(characterIndexForInsertion(at: point), storage.length - 1)
+        let ns = storage.string as NSString
+        let line = ns.lineRange(for: NSRange(location: index, length: 0))
+        let text = ns.substring(with: line)
+        guard let match = LineStatus.match(in: text), let display = match.displayRange else { return false }
+        let global = NSRange(location: line.location + display.location, length: display.length)
+        guard NSLocationInRange(index, global) else { return false }
+        showLineStatusMenu(forLineAt: line.location, at: point, in: self)
+        return true
+    }
+
+    func showLineStatusMenu(forLineAt location: Int, at point: NSPoint, in view: NSView) {
+        statusMenuLineLocation = location
+        let menu = NSMenu()
+        let clear = NSMenuItem(title: L10n.text("status.none"),
+                               action: #selector(selectLineStatus(_:)), keyEquivalent: "")
+        clear.target = self
+        clear.representedObject = ""
+        menu.addItem(clear)
+        if !Settings.noteStatuses.isEmpty { menu.addItem(.separator()) }
+        for status in Settings.noteStatuses {
+            let item = NSMenuItem(title: status.name,
+                                  action: #selector(selectLineStatus(_:)), keyEquivalent: "")
+            item.target = self
+            item.representedObject = status.id
+            menu.addItem(item)
+        }
+        menu.popUp(positioning: nil, at: point, in: view)
+    }
+
+    @objc private func selectLineStatus(_ sender: NSMenuItem) {
+        guard let location = statusMenuLineLocation else { return }
+        let id = (sender.representedObject as? String).flatMap { $0.isEmpty ? nil : $0 }
+        onLineStatusChange?(location, id)
+        statusMenuLineLocation = nil
     }
 
     /// Returns true when the click landed on a link and opened it.
@@ -717,6 +773,9 @@ struct NoteTextView: NSViewRepresentable {
         tv.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude,
                             height: CGFloat.greatestFiniteMagnitude)
         tv.delegate = context.coordinator
+        tv.onLineStatusChange = { [weak bridge = bridge] location, statusID in
+            bridge?.setStatusForLine(at: location, statusID: statusID)
+        }
         tv.isRichText = false
         tv.allowsUndo = true
         tv.drawsBackground = false
@@ -751,6 +810,10 @@ struct NoteTextView: NSViewRepresentable {
         overlays.attach(to: tv, scrollView: scroll)
         tv.imageOverlays = overlays
         overlays.refresh()
+        let statusOverlays = LineStatusOverlayManager()
+        statusOverlays.attach(to: tv, scrollView: scroll)
+        tv.lineStatusOverlays = statusOverlays
+        statusOverlays.refresh()
         if autofocus {
             DispatchQueue.main.async { tv.window?.makeFirstResponder(tv) }
         }
@@ -922,6 +985,7 @@ struct NoteTextView: NSViewRepresentable {
             // The hidden-token set may have changed; overlays and reserved line
             // heights are rebuilt from the freshly styled attributes.
             (tv as? TaskTextView)?.imageOverlays?.refresh()
+            (tv as? TaskTextView)?.lineStatusOverlays?.refresh()
             if invalidateCursors { tv.window?.invalidateCursorRects(for: tv) }
         }
 
@@ -951,6 +1015,7 @@ struct NoteTextView: NSViewRepresentable {
             needsFullPass = false
             rememberConfiguration()
             (tv as? TaskTextView)?.imageOverlays?.refresh()
+            (tv as? TaskTextView)?.lineStatusOverlays?.refresh()
             tv.window?.invalidateCursorRects(for: tv)
         }
 
@@ -1107,7 +1172,7 @@ struct NoteEditorView: View {
                          fontSize: deck.fontSize,
                          markdownEnabled: deck.markdown,
                          textDirection: note.textDirection,
-                         styleToken: "\(note.color)|\(deck.fontSize)|\(Settings.noteFontName)|\(deck.markdown)")
+                         styleToken: "\(note.color)|\(deck.fontSize)|\(Settings.noteFontName)|\(deck.markdown)|\(Settings.noteStatusStyleToken)")
             footer
         }
     }
